@@ -1,0 +1,171 @@
+name: mswin
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  mswin:
+    strategy:
+      matrix:
+        vs: [2019]
+      fail-fast: false
+    runs-on: windows-2019
+    env:
+      APPVEYOR: 'True'
+
+    steps:
+      - name: Cache - .downloaded-cache
+        uses: actions/cache@v2
+        with:
+          path: .downloaded-cache
+          key: dl-cache-win-mswin-${{ matrix.vs }}
+
+      - name: Cache - chocolatey
+        uses: actions/cache@v2
+        with:
+          path: C:\Users\runneradmin\AppData\Local\Temp\chocolatey
+          key: chocolatey-${{ matrix.vs }}
+
+      - name: Cache - vcpkg-download
+        uses: actions/cache@v2
+        with:
+          path: C:\vcpkg\downloads
+          key: vcpkg-download-${{ matrix.vs }}
+
+      - name: git config
+        run: |
+          git config --system core.autocrlf false
+          git config --system core.eol lf
+
+      - name: repo checkout
+        uses: actions/checkout@v2
+
+      - name: Checkout ruby
+        run: |
+          $gh = 'https://github.com'
+          git clone -q --depth=1 --no-tags -b v2_7_1 $gh/ruby/ruby.git src
+
+      - name: load ruby
+        uses: MSP-Greg/setup-ruby-pkgs@v1
+        with:
+          ruby-version: mswin
+          mswin: bison
+          choco: openssl
+          vcpkg: readline
+
+      - name: Configure
+        shell: cmd
+        run: |
+          mkdir .downloaded-cache
+          mklink /j %cd%\src\.downloaded-cache %cd%\.downloaded-cache
+          mkdir install
+          set PRE=%cd%\ruby-mswin
+          mkdir build
+          cd build
+          ../src/win32/configure.bat --disable-install-doc --prefix=%PRE% --without-ext=+,dbm,gdbm --enable-bundled-libffi %OPT_DIR:\=/% %SSL_DIR:\=/%
+
+      - name: download unicode, extlibs, zlib
+        run: |
+          $zlib = 'zlib1211.zip'
+          curl -fsSL -o $zlib --retry 10 https://zlib.net/$zlib
+          &'C:\Program Files\7-Zip\7z.exe' x -osrc/ext/zlib $zlib
+          cd build
+          # libffi is causing error
+          nmake extract-extlibs
+          nmake update-unicode
+
+      - name: apply patches
+        run: |
+          cd src
+          patch.exe -p1 -N --no-backup-if-mismatch -i ../mswin_patches/test-all.patch
+          patch.exe -p1 -N --no-backup-if-mismatch -i ../mswin_patches/test-all_open_port.patch
+
+      - name: nmake
+        timeout-minutes: 20
+        run:  |
+          cd build
+          nmake
+
+      - name: nmake install
+        run: |
+          cd build
+          nmake "DESTDIR=" install-nodoc
+
+      - name: misc install, ruby -v
+        run: |
+          $repo = $pwd
+          del ruby-mswin\lib\x64-vcruntime140-ruby300-static.lib
+          mkdir ruby-mswin\bin\ruby_builtin_dlls 2>&1>$null
+          cd ruby-mswin\bin\ruby_builtin_dlls
+          Copy-Item C:\vcpkg\installed\x64-windows\bin\readline.dll
+          Copy-Item C:\openssl-win\bin\libcrypto-1_1-x64.dll
+          Copy-Item C:\openssl-win\bin\libssl-1_1-x64.dll
+          Copy-Item $repo\mswin\ruby_builtin_dlls.manifest
+          Move-Item -Path ..\zlib1.dll
+          cd ..
+          mt.exe -manifest $repo\mswin\ruby-exe.xml -outputresource:ruby.exe;1
+          mt.exe -manifest $repo\mswin\ruby-exe.xml -outputresource:rubyw.exe;1
+          cd $repo
+          ruby-mswin\bin\ruby.exe -v mswin\copy_bash_scripts.rb
+
+      - name: nmake test
+        timeout-minutes: 4
+        shell: cmd
+        run: |
+          cd build
+          set PATH=%cd%\ruby-mswin\bin;%cd%\ruby-mswin\bin\ruby_builtin_dlls;%PATH%
+          nmake test
+
+      # copy dll files to bin folder, add bin to path
+      # ruby/test_time_tz.rb requires additional gems
+      - name: nmake test-all -j
+        timeout-minutes: 30
+        shell: cmd
+        run: |
+          set /a JOBS=%NUMBER_OF_PROCESSORS%
+          set EXCL_N=--exclude test_jit --exclude test_syntax --exclude test_time_tz --exclude test_undef
+          chcp 437
+          set PATH=%cd%\ruby-mswin\bin;%cd%\ruby-mswin\bin\ruby_builtin_dlls;%PATH%
+          cd build
+          nmake test-all "TESTOPTS=-j%JOBS% %EXCL_N% -v --timeout-scale=3.0 --retry --job-status=normal --show-skip"
+
+      - name: nmake test-all singles
+        timeout-minutes: 5
+        shell: cmd
+        run: |
+          set tr=../src/test/ruby
+          set TESTS=%tr%/test_jit.rb %tr%/test_syntax.rb %tr%/test_time_tz.rb %tr%/test_undef.rb
+          chcp 437
+          set PATH=%cd%\ruby-mswin\bin;%cd%\ruby-mswin\bin\ruby_builtin_dlls;%PATH%
+          cd build
+          nmake test-all "TESTOPTS=-v --timeout-scale=3.0"
+
+      - name: test-spec from install
+        timeout-minutes: 5
+        shell: cmd
+        run: |
+          chcp 437
+          set PATH=%cd%\ruby-mswin\bin;%PATH%
+          cd src/spec/ruby
+          ruby ../mspec/bin/mspec -j
+
+      - name: CLI Check
+        run: ./mswin/cli_test.ps1
+
+      - name: copy misc files
+        run: |
+          cd ruby-mswin
+          Copy-Item ../src/BSDL
+          Copy-Item ../src/COPYING
+          Copy-Item ../src/LEGAL
+          $arch = $(./bin/ruby -e "STDOUT.write RbConfig::CONFIG['archdir']")
+          Rename-Item -Path $arch/readline.so -NewName $arch/readline.so_
+
+      - name: upload asset
+        timeout-minutes: 5
+        uses: ./.github/actions/upload-binary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          ruby_path: ./ruby-mswin
