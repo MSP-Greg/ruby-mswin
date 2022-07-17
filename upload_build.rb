@@ -146,6 +146,8 @@ module UploadBuild
 
       exit 1 if resp_obj.is_a? Net::HTTPResponse
 
+      sleep 3 # give the release some time to appear?
+
       Net::HTTP.start('github.com', 443, :use_ssl => true) do |http|
         req = Net::HTTP::Head.new "/#{USER_REPO}/releases/download/#{TAG}/#{pkg_name}.7z"
         resp = http.request req
@@ -159,7 +161,7 @@ module UploadBuild
 
     def update_release_notes(old_body, name, time)
       ruby_vers = `#{ENV['PRE']}/bin/ruby -v`
-      addition = "\n**#{name}.7z:** #{ruby_vers}\nDate/Time: #{time}   " \
+      addition = "\n**#{name}.7z: #{ruby_vers}**\nDate/Time: #{time}   " \
         "Run No: #{RUN_NUMBER}\nSHA512:\n#{@sha512}\n"
       old_body << addition
     end
