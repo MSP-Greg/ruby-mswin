@@ -160,7 +160,7 @@ module UploadBuild
     end
 
     def update_release_notes(old_body, name, time)
-      ruby_vers = `#{ENV['PRE']}/bin/ruby -v`
+      ruby_vers = %x[#{ENV['PRE']}/bin/ruby -v].strip
       addition = "\n**#{name}.7z: #{ruby_vers}**\nDate/Time: #{time}   " \
         "Run No: #{RUN_NUMBER}\nSHA512:\n#{@sha512}\n"
       old_body << addition
