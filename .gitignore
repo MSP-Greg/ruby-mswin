@@ -1,6 +1,9 @@
 /build/
 /git
 /install/
+/ruby-mingw/
+/ruby-mswin/
+/ruby-ucrt/
 /ruby
 /rubyinstaller2
 /ruby_readline
@@ -13,3 +16,6 @@
 
 local.ps1
 /z_testing.rb
+temp_*.ps1
+patches.txt
+

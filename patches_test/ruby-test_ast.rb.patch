@@ -1,0 +1,22 @@
+# rubygems tests generate files in test/tmp, including
+# causes errors with parallel testing
+diff --git a/test/ruby/test_ast.rb b/test/ruby/test_ast.rb
+index a4edfd3cbe..a7d8b333bb 100644
+--- a/test/ruby/test_ast.rb
++++ b/test/ruby/test_ast.rb
+@@ -114,6 +114,7 @@ def validate_not_cared0(node)
+   SRCDIR = File.expand_path("../../..", __FILE__)
+ 
+   Dir.glob("test/**/*.rb", base: SRCDIR).each do |path|
++    next if path.include? 'test/tmp/'
+     define_method("test_ranges:#{path}") do
+       helper = Helper.new("#{SRCDIR}/#{path}")
+       helper.validate_range
+@@ -123,6 +124,7 @@ def validate_not_cared0(node)
+   end
+ 
+   Dir.glob("test/**/*.rb", base: SRCDIR).each do |path|
++    next if path.include? 'test/tmp/'
+     define_method("test_not_cared:#{path}") do
+       helper = Helper.new("#{SRCDIR}/#{path}")
+       helper.validate_not_cared

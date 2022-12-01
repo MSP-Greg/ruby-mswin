@@ -24,8 +24,8 @@
   </compatibility>
   <dependency>
     <dependentAssembly>
-      <assemblyIdentity type="win32" name="ruby_builtin_dlls" version="1.0.0.1"/>
+      <assemblyIdentity type="win32" name="ruby_builtin_dlls" version="1.0.0.3"/>
     </dependentAssembly>
   </dependency>
-  <file name="x64-vcruntime140-ruby_ABI_.dll"/>
+  <file name="x64-vcruntime140-ruby320.dll"/>
 </assembly>

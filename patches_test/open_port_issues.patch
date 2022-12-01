@@ -1,4 +1,3 @@
-Fix random port issues when runnning Windows CI
 diff --git a/test/openssl/test_ssl.rb b/test/openssl/test_ssl.rb
 index a7607da073..01a5b652b9 100644
 --- a/test/openssl/test_ssl.rb
