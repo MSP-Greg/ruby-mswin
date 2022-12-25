@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+RUBY_BIN=$(dirname "$(which ruby)")
+
+PATH=${PATH/$RUBY_BIN:/}
+
 PATH="${PWD}/${PRE}/bin:${PATH}"
 
 error=0
