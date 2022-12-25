@@ -13,9 +13,9 @@ jobs:
       fail-fast: false
     runs-on: windows-${{ matrix.vs }}
     env:
-      PRE: Ruby31-ms
-      RUBY_FILENAME: Ruby-3.1.3-ms
-      TAG: v3_1_3
+      PRE: Ruby32-ms
+      RUBY_FILENAME: Ruby-3.2.0-ms
+      TAG: v3_2_0
 
     steps:
       - name: git config
@@ -38,6 +38,17 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: mswin
+
+      - name: Install/Update Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+          components: rustfmt
+
+      - name: Configure bindgen
+        run: |
+          echo "LIBCLANG_PATH=$((gcm clang).source -replace "clang.exe")" >> $env:GITHUB_ENV
+          echo "BINDGEN_EXTRA_CLANG_ARGS=$((gcm clang).source -replace "bin\clang.exe","include")" >> $env:GITHUB_ENV
 
       - name: Cache - .downloaded-cache
         uses: actions/cache@v3
