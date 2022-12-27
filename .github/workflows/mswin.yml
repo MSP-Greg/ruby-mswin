@@ -78,7 +78,7 @@ jobs:
 
       - name: save log artifact
         if: success() || failure()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.TEST_LOGS }}
           path: ./logs
