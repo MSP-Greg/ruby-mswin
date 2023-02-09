@@ -14,8 +14,8 @@ jobs:
     runs-on: windows-${{ matrix.vs }}
     env:
       PRE: Ruby32-ms
-      RUBY_FILENAME: Ruby-3.2.0-ms
-      TAG: v3_2_0
+      RUBY_FILENAME: Ruby-3.2.1-ms
+      TAG: v3_2_1
 
     steps:
       - name: git config
